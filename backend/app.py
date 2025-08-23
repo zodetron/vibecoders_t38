@@ -1,97 +1,108 @@
-import os
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, request, jsonify, session, render_template
 from flask_sqlalchemy import SQLAlchemy
+from flask_bcrypt import Bcrypt
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_cors import CORS
+from cryptography.fernet import Fernet
+import os
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+app.config['SECRET_KEY'] = 'your_secret_key'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 db = SQLAlchemy(app)
+bcrypt = Bcrypt(app)
+CORS(app)
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
 
-# -----------------------
-# Models
-# -----------------------
-class User(db.Model):
+# Generate a key for encryption
+def generate_key():
+    return Fernet.generate_key()
+
+# Load the key from an environment variable or generate a new one
+if os.environ.get('FERNET_KEY') is None:
+    key = generate_key()
+    os.environ['FERNET_KEY'] = key.decode()  # Store the key in an environment variable
+else:
+    key = os.environ['FERNET_KEY'].encode()
+
+fernet = Fernet(key)
+
+# User Model
+class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(120), nullable=False)
-    balance = db.Column(db.Float, default=0.0)        # 💰 user balance
-    holdings = db.Column(db.String(500), default="")  # 📦 holdings (could be JSON string)
+    username = db.Column(db.String(150), unique=True, nullable=False)
+    password = db.Column(db.String(150), nullable=False)
+    balance = db.Column(db.Float, default=0.0)
 
-with app.app_context():
-    db.create_all()
+class Investment(db.Model):
+    __tablename__ = 'investments'   # 👈 force plural name
+    id = db.Column(db.Integer, primary_key=True)
+    asset = db.Column(db.String(50), nullable=False)
+    investment_type = db.Column(db.String(50), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    date = db.Column(db.String(50), nullable=False)
 
-# -----------------------
-# Routes
-# -----------------------
-@app.route("/api/register", methods=["POST"])
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+@app.route('/register', methods=['POST'])
 def register():
-    data = request.json
-    email = data.get("email")
-    password = data.get("password")
-    if not email or not password:
-        return jsonify({"error": "Missing email or password"}), 400
-    if User.query.filter_by(email=email).first():
-        return jsonify({"error": "Email already exists"}), 409
-    user = User(email=email, password=password, balance=100.0, holdings="{}")  # default values
-    db.session.add(user)
+    data = request.get_json()
+    hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+    new_user = User(username=data['username'], password=hashed_password)
+    db.session.add(new_user)
     db.session.commit()
-    return jsonify({"message": "User registered"}), 201
+    return jsonify({'message': 'User  registered successfully'}), 201
 
-@app.route("/api/login", methods=["POST"])
+@app.route('/login', methods=['POST'])
 def login():
-    data = request.json
-    email = data.get("email")
-    password = data.get("password")
-    user = User.query.filter_by(email=email, password=password).first()
-    if not user:
-        return jsonify({"error": "Invalid credentials"}), 401
-    return jsonify({
-        "message": "Login successful",
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "balance": user.balance,
-            "holdings": user.holdings
-        }
-    })
+    data = request.get_json()
+    user = User.query.filter_by(username=data['username']).first()
+    if user and bcrypt.check_password_hash(user.password, data['password']):
+        login_user(user)
+        return jsonify({'message': 'Login successful'}), 200
+    return jsonify({'message': 'Invalid credentials'}), 401
 
-@app.route("/api/users")
-def get_users():
-    users = User.query.all()
-    return jsonify([
-        {"id": u.id, "email": u.email, "balance": u.balance, "holdings": u.holdings}
-        for u in users
-    ])
+@app.route('/logout', methods=['POST'])
+@login_required
+def logout():
+    logout_user()
+    return jsonify({'message': 'Logout successful'}), 200
 
-# update balance
-@app.route("/api/update_balance", methods=["POST"])
-def update_balance():
-    data = request.json
-    user_id = data.get("id")
-    new_balance = data.get("balance")
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-    user.balance = new_balance
+@app.route('/add_investment', methods=['POST'])
+@login_required
+def add_investment():
+    data = request.get_json()
+    encrypted_asset = fernet.encrypt(data['asset'].encode()).decode()  # Encrypt the asset
+    new_investment = Investment(
+        asset=encrypted_asset,
+        amount=data['amount'],
+        investment_type=data['type'],
+        date=data['date']
+    )
+    current_user.balance += data['amount'] if data['type'] == 'Buy' else -data['amount']
+    db.session.add(new_investment)
     db.session.commit()
-    return jsonify({"message": "Balance updated", "balance": user.balance})
+    return jsonify({'message': 'Investment added successfully'}), 201
 
-# update holdings
-@app.route("/api/update_holdings", methods=["POST"])
-def update_holdings():
-    data = request.json
-    user_id = data.get("id")
-    new_holdings = data.get("holdings")
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-    user.holdings = new_holdings
-    db.session.commit()
-    return jsonify({"message": "Holdings updated", "holdings": user.holdings})
+@app.route('/holdings', methods=['GET'])
+@login_required
+def get_holdings():
+    investments = Investment.query.filter_by(user_id=current_user.id).all()
+    holdings = [{'asset': fernet.decrypt(inv.asset.encode()).decode(), 'amount': inv.amount, 'type': inv.investment_type, 'date': inv.date} for inv in investments]
+    return jsonify({'holdings': holdings, 'balance': current_user.balance}), 200
 
 @app.route("/")
-def home():
-    return render_template("index.html")
+def index():
+    return render_template("2.html")
 
-if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()  # Create database tables
+    app.run(debug=True)

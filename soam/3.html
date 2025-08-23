@@ -1,0 +1,220 @@
+<!DOCTYPE html> 
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InvestoTrader - Portfolio & Trading Platform</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* ---- Same Styles as Before ---- */
+    :root {
+      --primary: #2563eb;
+      --secondary: #0f172a;
+      --accent: #22c55e;
+      --danger: #ef4444;
+      --light: #f8fafc;
+      --dark: #1e293b;
+      --gray: #94a3b8;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%); color: var(--light); min-height: 100vh; display: flex; flex-direction: column; }
+    .container { width:100%; max-width:1200px; margin:0 auto; padding:0 20px; }
+    header { background-color: rgba(15,23,42,0.8); backdrop-filter: blur(10px); padding:20px 0; position: sticky; top:0; z-index:100; }
+    .header-content { display:flex; justify-content: space-between; align-items: center; }
+    .logo { font-size:24px; font-weight:700; color:white; display:flex; align-items:center; gap:10px; }
+    .logo i { color: var(--accent); }
+    nav ul { display:flex; list-style:none; gap:30px; }
+    nav a { color: var(--light); text-decoration:none; font-weight:500; transition: color 0.3s; }
+    nav a:hover { color: var(--accent); }
+    .auth-buttons { display:flex; gap:15px; }
+    .btn { padding:10px 20px; border-radius:6px; font-weight:600; cursor:pointer; transition:all 0.3s; border:none; }
+    .btn-outline { background:transparent; border:2px solid var(--primary); color:var(--primary); }
+    .btn-primary { background-color:var(--primary); color:white; }
+    .btn-primary:hover { background-color:#1d4ed8; }
+    .btn-outline:hover { background-color:var(--primary); color:white; }
+    .btn-accent { background-color:var(--accent); color:white; }
+    .btn-accent:hover { background-color:#16a34a; }
+    .btn-danger { background-color:var(--danger); color:white; }
+    .btn-danger:hover { background-color:#dc2626; }
+    .hero, .features-section, .pricing-section, .about-section { padding:80px 0; text-align:center; display:none; }
+    .hero h1 { font-size:3.5rem; margin-bottom:20px; background:linear-gradient(to right,#60a5fa,var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .hero p { font-size:1.2rem; color:var(--gray); max-width:700px; margin:0 auto 40px; line-height:1.6; }
+    .features { display:flex; justify-content:center; gap:30px; margin-top:50px; flex-wrap:wrap; }
+    .feature-card { background:rgba(30,41,59,0.5); border-radius:12px; padding:25px; width:280px; text-align:center; transition:transform 0.3s; }
+    .feature-card:hover { transform:translateY(-5px); }
+    .feature-card i { font-size:40px; color:var(--accent); margin-bottom:20px; }
+    .feature-card h3 { font-size:1.5rem; margin-bottom:15px; }
+    .feature-card p { color:var(--gray); line-height:1.5; }
+    .auth-container { display:none; background:rgba(30,41,59,0.9); border-radius:12px; padding:30px; width:400px; margin:50px auto; box-shadow:0 10px 25px rgba(0,0,0,0.2); }
+    .auth-container h2 { text-align:center; margin-bottom:25px; color:var(--accent); }
+    .dashboard { display:none; padding:40px 0; }
+    footer { background-color:var(--secondary); padding:30px 0; margin-top:50px; }
+    .footer-content { display:flex; justify-content:space-between; align-items:center; }
+    .footer-links { display:flex; gap:20px; }
+    .footer-links a { color:var(--gray); text-decoration:none; transition:color 0.3s; }
+    .footer-links a:hover { color:var(--accent); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container header-content">
+      <div class="logo">
+        <i class="fas fa-chart-line"></i>
+        <span>InvestoTrader</span>
+      </div>
+      <nav>
+        <ul>
+          <li><a href="#" onclick="showHome()">Home</a></li>
+          <li><a href="#" onclick="showFeatures()">Features</a></li>
+          <li><a href="#" onclick="showPricing()">Pricing</a></li>
+          <li><a href="#" onclick="showAbout()">About</a></li>
+        </ul>
+      </nav>
+      <div class="auth-buttons">
+        <button class="btn btn-outline" onclick="showLogin()">Login</button>
+        <button class="btn btn-primary" onclick="showRegister()">Register</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Home Section -->
+  <div class="container hero" id="homeSection">
+    <h1>Smart Investing Made Simple</h1>
+    <p>Manage your portfolio, get AI-powered trading suggestions, and automate your trades with Alpaca API integration. All in one platform.</p>
+    <div>
+      <button class="btn btn-primary" onclick="showRegister()">Get Started</button>
+      <button class="btn btn-outline">Learn More</button>
+    </div>
+  </div>
+
+  <!-- Login Form -->
+  <div class="container auth-container" id="loginForm">
+    <h2>Login to Your Account</h2>
+    <form>
+      <div class="form-group">
+        <label for="loginEmail">Email Address</label>
+        <input type="email" id="loginEmail" placeholder="Enter your email">
+      </div>
+      <div class="form-group">
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" placeholder="Enter your password">
+      </div>
+      <button type="button" class="btn btn-primary" style="width: 100%;" onclick="login()">Login</button>
+    </form>
+  </div>
+
+  <!-- Register Form -->
+  <div class="container auth-container" id="registerForm">
+    <h2>Create an Account</h2>
+    <form>
+      <div class="form-group">
+        <label for="registerName">Full Name</label>
+        <input type="text" id="registerName" placeholder="Enter your full name">
+      </div>
+      <div class="form-group">
+        <label for="registerEmail">Email Address</label>
+        <input type="email" id="registerEmail" placeholder="Enter your email">
+      </div>
+      <div class="form-group">
+        <label for="registerPassword">Password</label>
+        <input type="password" id="registerPassword" placeholder="Create a password">
+      </div>
+      <button type="button" class="btn btn-primary" style="width: 100%;" onclick="register()">Create Account</button>
+    </form>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="container dashboard" id="dashboard">
+    <div class="dashboard-header">
+      <h2 class="welcome">Welcome, <span id="userName">User</span>!</h2>
+      <button class="btn btn-outline" onclick="logout()">Logout</button>
+    </div>
+    <div class="balance-title">Your Portfolio Balance</div>
+    <div class="balance-amount">$24,582.36</div>
+    <div class="balance-actions">
+      <button class="btn btn-accent"><i class="fas fa-plus"></i> Add Funds</button>
+      <button class="btn btn-outline">Withdraw</button>
+    </div>
+    <div class="trading-options" style="margin-top:20px;">
+      <div class="trading-card">
+        <i class="fas fa-robot"></i>
+        <h3>Automated Trading</h3>
+        <button id="autobotButton" class="btn btn-accent">Enable Automation</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="container footer-content">
+      <div class="logo"><i class="fas fa-chart-line"></i><span>InvestoTrader</span></div>
+      <div class="footer-links">
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Service</a>
+        <a href="#">Contact Us</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Sections
+    const sections = {
+      home: document.getElementById('homeSection'),
+      login: document.getElementById('loginForm'),
+      register: document.getElementById('registerForm'),
+      dashboard: document.getElementById('dashboard'),
+    };
+    function hideAll(){ Object.values(sections).forEach(sec=>sec.style.display='none'); }
+    function showHome(){ hideAll(); sections.home.style.display='block'; }
+    function showLogin(){ hideAll(); sections.login.style.display='block'; }
+    function showRegister(){ hideAll(); sections.register.style.display='block'; }
+    function showDashboard(){ hideAll(); sections.dashboard.style.display='block'; }
+    function logout(){ showHome(); }
+
+    // Fake users
+    let users = [
+      {name:"John Doe", email:"john@example.com", password:"1234"},
+      {name:"Alice Smith", email:"alice@example.com", password:"abcd"},
+      {name:"Bob Lee", email:"bob@example.com", password:"pass123"}
+    ];
+
+    // Login
+    function login(){
+      const email=document.getElementById('loginEmail').value;
+      const password=document.getElementById('loginPassword').value;
+      const user=users.find(u=>u.email===email && u.password===password);
+      if(user){
+        document.getElementById('userName').textContent=user.name;
+        showDashboard();
+      } else {
+        alert("Invalid email or password!");
+      }
+    }
+
+    // Register
+    function register(){
+      const name=document.getElementById('registerName').value;
+      const email=document.getElementById('registerEmail').value;
+      const password=document.getElementById('registerPassword').value;
+      if(users.find(u=>u.email===email)){
+        alert("User already exists!");
+        return;
+      }
+      users.push({name,email,password});
+      alert("Registration successful! Please log in.");
+      showLogin();
+    }
+
+    // Bot toggle
+    const autobotButton=document.getElementById('autobotButton');
+    let botRunning=false;
+    autobotButton.addEventListener('click',()=>{
+      botRunning=!botRunning;
+      autobotButton.textContent=botRunning? "Disable Automation":"Enable Automation";
+      alert(botRunning? "Bot started!":"Bot stopped!");
+    });
+
+    // Init
+    showHome();
+  </script>
+</body>
+</html>
